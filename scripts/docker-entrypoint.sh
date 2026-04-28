@@ -1,12 +1,15 @@
 #!/bin/sh
 set -e
 
-# Capture runtime UID/GID from environment variables, defaulting to 1000
+# If not root, Kubernetes already applied the correct runAsUser — exec directly
+if [ "$(id -u)" -ne 0 ]; then
+    exec "$@"
+fi
+
+# Running as root: remap node UID/GID to match host user if needed
 PUID=${USER_UID:-1000}
 PGID=${USER_GID:-1000}
 
-# Adjust the node user's UID/GID if they differ from the runtime request
-# and fix volume ownership only when a remap is needed
 changed=0
 
 if [ "$(id -u node)" -ne "$PUID" ]; then
